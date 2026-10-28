@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Poneglyph — Enkripsi & Dekripsi Teks</title>
+  <meta name="description" content="Aplikasi kriptografi web: Caesar, Vigenère, AES-256, Base64, XOR. Enkripsi + dekripsi dalam satu file HTML." />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: {
+        fontFamily: {
+          sans: ['ui-sans-serif','system-ui','sans-serif'],
+          mono: ['ui-monospace','SFMono-Regular','Menlo','monospace'],
+        },
+      }},
+    };
+  </script>
+
+  <!-- Lucide Icons via CDN -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <!-- CryptoJS untuk AES (via CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+
+  <style>
+    :root {
+      /* Gurun pasir — light */
+      --radius: 0.75rem;
+      --background: oklch(0.99 0.004 75);    /* cream pasir terang */
+      --foreground: oklch(0.16 0.012 65);     /* coklat gelap hangat */
+      --card: oklch(1 0 0);
+      --primary: oklch(0.62 0.11 65);         /* khaki / tan */
+      --primary-foreground: oklch(0.99 0.01 75);
+      --secondary: oklch(0.97 0.008 75);
+      --secondary-foreground: oklch(0.25 0.02 70);
+      --muted: oklch(0.97 0.008 75);
+      --muted-foreground: oklch(0.5 0.022 70);
+      --accent: oklch(0.95 0.04 75);          /* pasir hangat */
+      --accent-foreground: oklch(0.3 0.1 70);
+      --destructive: oklch(0.577 0.245 27.325);
+      --border: oklch(0.9 0.012 70);
+      --input: oklch(0.92 0.01 70);
+      --ring: oklch(0.62 0.11 65);
+    }
+    .dark {
+      /* Gurun pasir — dark (malam gurun) */
+      --background: oklch(0.14 0.012 55);     /* coklat gelap hangat */
+      --foreground: oklch(0.97 0.008 75);     /* krem hangat */
+      --card: oklch(0.18 0.015 55);
+      --primary: oklch(0.8 0.12 75);          /* pasir terang */
+      --primary-foreground: oklch(0.16 0.02 55);
+      --secondary: oklch(0.24 0.015 55);
+      --secondary-foreground: oklch(0.97 0.008 75);
+      --muted: oklch(0.23 0.012 55);
+      --muted-foreground: oklch(0.68 0.022 70);
+      --accent: oklch(0.26 0.04 60);
+      --accent-foreground: oklch(0.85 0.08 75);
+      --destructive: oklch(0.704 0.191 22.216);
+      --border: oklch(1 0 0 / 10%);
+      --input: oklch(1 0 0 / 12%);
+      --ring: oklch(0.8 0.12 75);
+    }
+
+    html, body { background: var(--background); color: var(--foreground); }
+    .bg-background { background-color: var(--background); }
+    .bg-card { background-color: var(--card); }
+    .bg-primary { background-color: var(--primary); }
+    .bg-primary\/5 { background-color: color-mix(in oklch, var(--primary) 5%, transparent); }
+    .bg-primary\/10 { background-color: color-mix(in oklch, var(--primary) 10%, transparent); }
+    .bg-primary\/15 { background-color: color-mix(in oklch, var(--primary) 15%, transparent); }
+    .bg-primary\/\[0\.03\] { background-color: color-mix(in oklch, var(--primary) 3%, transparent); }
+    .bg-secondary { background-color: var(--secondary); }
+    .bg-muted { background-color: var(--muted); }
+    .bg-muted\/30 { background-color: color-mix(in oklch, var(--muted) 30%, transparent); }
+    .bg-muted\/40 { background-color: color-mix(in oklch, var(--muted) 40%, transparent); }
+    .bg-muted\/60 { background-color: color-mix(in oklch, var(--muted) 60%, transparent); }
+    .bg-accent { background-color: var(--accent); }
+    .bg-accent\/40 { background-color: color-mix(in oklch, var(--accent) 40%, transparent); }
+    .bg-background\/30 { background-color: color-mix(in oklch, var(--background) 30%, transparent); }
+    .bg-background\/40 { background-color: color-mix(in oklch, var(--background) 40%, transparent); }
+    .bg-background\/60 { background-color: color-mix(in oklch, var(--background) 60%, transparent); }
+    .bg-background\/70 { background-color: color-mix(in oklch, var(--background) 70%, transparent); }
+    .bg-card\/50 { background-color: color-mix(in oklch, var(--card) 50%, transparent); }
+    .bg-card\/60 { background-color: color-mix(in oklch, var(--card) 60%, transparent); }
+
+    .text-foreground { color: var(--foreground); }
+    .text-muted-foreground { color: var(--muted-foreground); }
+    .text-primary { color: var(--primary); }
+    .text-primary-foreground { color: var(--primary-foreground); }
+    .text-destructive { color: var(--destructive); }
+
+    .border-border { border-color: var(--border); }
+    .border-border\/40 { border-color: color-mix(in oklch, var(--border) 40%, transparent); }
+    .border-border\/50 { border-color: color-mix(in oklch, var(--border) 50%, transparent); }
+    .border-border\/60 { border-color: color-mix(in oklch, var(--border) 60%, transparent); }
+    .border-primary\/30 { border-color: color-mix(in oklch, var(--primary) 30%, transparent); }
+    .border-primary\/60 { border-color: color-mix(in oklch, var(--primary) 60%, transparent); }
+    .border-input { border-color: var(--input); }
+
+    .ring-primary\/30 { box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 30%, transparent); }
+    .ring-background { box-shadow: 0 0 0 2px var(--background); }
+
+    .hover\:bg-primary\/90:hover { background-color: color-mix(in oklch, var(--primary) 90%, var(--primary-foreground)); }
+    .hover\:bg-primary\/15:hover { background-color: color-mix(in oklch, var(--primary) 15%, transparent); }
+    .hover\:bg-accent:hover { background-color: var(--accent); }
+    .hover\:text-foreground:hover { color: var(--foreground); }
+    .hover\:text-destructive:hover { color: var(--destructive); }
+    .hover\:border-primary\/40:hover { border-color: color-mix(in oklch, var(--primary) 40%, transparent); }
+    .focus\:ring-ring:focus { box-shadow: 0 0 0 2px var(--ring); }
+
+    .crypto-grid {
+      background-image:
+        linear-gradient(to right, oklch(0.8 0.12 75 / 0.08) 1px, transparent 1px),
+        linear-gradient(to bottom, oklch(0.8 0.12 75 / 0.08) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+    .crypto-glow {
+      box-shadow: 0 0 0 1px oklch(0.8 0.12 75 / 0.25), 0 0 24px -4px oklch(0.8 0.12 75 / 0.35);
+    }
+    .text-glow { text-shadow: 0 0 18px oklch(0.8 0.12 75 / 0.45); }
+
+    .cat-badge[data-cat="Klasik"] {
+      background-color: color-mix(in oklch, oklch(0.7 0.16 60) 10%, transparent);
+      color: oklch(0.55 0.16 60); border-color: color-mix(in oklch, oklch(0.7 0.16 60) 20%, transparent);
+    }
+    .dark .cat-badge[data-cat="Klasik"] { color: oklch(0.78 0.15 70); }
+    .cat-badge[data-cat="Modern"] {
+      background-color: color-mix(in oklch, oklch(0.8 0.12 75) 10%, transparent);
+      color: oklch(0.45 0.1 65); border-color: color-mix(in oklch, oklch(0.8 0.12 75) 20%, transparent);
+    }
+    .dark .cat-badge[data-cat="Modern"] { color: oklch(0.85 0.1 75); }
+    .cat-badge[data-cat="Encoding"] {
+      background-color: color-mix(in oklch, oklch(0.65 0.14 220) 10%, transparent);
+      color: oklch(0.4 0.13 220); border-color: color-mix(in oklch, oklch(0.65 0.14 220) 20%, transparent);
+    }
+    .dark .cat-badge[data-cat="Encoding"] { color: oklch(0.75 0.14 210); }
+    .cat-badge[data-cat="Info"] {
+      background-color: color-mix(in oklch, oklch(0.6 0.1 250) 10%, transparent);
+      color: oklch(0.4 0.1 250); border-color: color-mix(in oklch, oklch(0.6 0.1 250) 20%, transparent);
+    }
+    .dark .cat-badge[data-cat="Info"] { color: oklch(0.72 0.1 240); }
+
+    .cat-dot-caesar { background-color: oklch(0.7 0.16 60); }
+    .cat-dot-vigenere { background-color: oklch(0.7 0.16 60); }
+    .cat-dot-aes { background-color: oklch(0.8 0.12 75); }
+    .cat-dot-base64 { background-color: oklch(0.65 0.14 220); }
+    .cat-dot-xor { background-color: oklch(0.7 0.16 60); }
+
+    .cs-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+    .cs-scroll::-webkit-scrollbar-track { background: transparent; }
+    .cs-scroll::-webkit-scrollbar-thumb {
+      background: oklch(0.8 0.12 75 / 0.3); border-radius: 9999px;
+      border: 2px solid transparent; background-clip: padding-box;
+    }
+    .cs-scroll::-webkit-scrollbar-thumb:hover { background: oklch(0.8 0.12 75 / 0.55); background-clip: padding-box; }
+
+    @keyframes float-up { from { opacity: 0; transform: translateY(8px);} to { opacity:1; transform: translateY(0);} }
+    .animate-float-up { animation: float-up 0.4s ease-out both; }
+
+    .method-card { cursor: pointer; }
+    .method-card.active {
+      border-color: color-mix(in oklch, var(--primary) 60%, transparent);
+      background-color: color-mix(in oklch, var(--primary) 5%, transparent);
+    }
+    .method-card.active .method-icon {
+      background-color: color-mix(in oklch, var(--primary) 15%, transparent);
+      color: var(--primary);
+    }
+    .method-card:not(.active) .method-icon {
+      background-color: var(--muted); color: var(--muted-foreground);
+    }
+
+    .theme-icon-moon { display: none; }
+    html.dark .theme-icon-sun { display: none; }
+    html.dark .theme-icon-moon { display: inline-block; }
+
+    .toast { animation: float-up 0.3s ease-out both; }
+    .toast-error {
+      border-color: color-mix(in oklch, var(--destructive) 40%, transparent);
+      background-color: color-mix(in oklch, var(--destructive) 10%, var(--card));
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none; appearance: none; width: 100%; height: 6px;
+      border-radius: 9999px; background: var(--muted); outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none; width: 18px; height: 18px;
+      border-radius: 9999px; background: var(--primary); cursor: pointer;
+      border: 2px solid var(--background);
+      box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 40%, transparent);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 18px; height: 18px; border-radius: 9999px; background: var(--primary);
+      cursor: pointer; border: 2px solid var(--background);
+    }
+
+    .hidden-section { display: none; }
+  </style>
+</head>
+<body class="font-sans antialiased">
+
+  <div class="relative flex min-h-screen flex-col">
+    <!-- background -->
+    <div aria-hidden="true" class="crypto-grid pointer-events-none absolute inset-0 -z-10 opacity-60"></div>
+    <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] bg-gradient-to-b from-primary/10 via-primary/[0.03] to-transparent"></div>
+
+    <!-- ===== HEADER ===== -->
+    <header class="sticky top-0 z-40 border-b border-border/40 bg-background/70 backdrop-blur-xl">
+      <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+        <div class="flex items-center gap-2.5">
+          <span class="relative flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15 ring-1 ring-primary/30">
+            <i data-lucide="shield-check" class="h-5 w-5 text-primary"></i>
+            <span class="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary ring-2 ring-background"></span>
+          </span>
+          <div class="leading-tight">
+            <p class="font-mono text-base font-bold tracking-tight">Poneglyph <span class="text-primary">translate</span></p>
+            <p class="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Enkripsi &amp; Dekripsi</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <a href="#metode" class="hidden rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground sm:inline-block">Metode</a>
+          <a href="#cara-kerja" class="hidden rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground sm:inline-block">Cara Kerja</a>
+          <button id="theme-toggle" aria-label="Ganti tema" class="relative inline-flex h-9 w-9 items-center justify-center rounded-md border border-border/60 bg-background/60 backdrop-blur transition-colors hover:bg-accent">
+            <i data-lucide="sun" class="h-[1.1rem] w-[1.1rem] theme-icon-sun"></i>
+            <i data-lucide="moon" class="absolute h-[1.1rem] w-[1.1rem] theme-icon-moon"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ===== MAIN ===== -->
+    <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+
+      <!-- HERO -->
+      <section class="mb-10 text-center sm:mb-12">
+        <div class="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+          <i data-lucide="sparkles" class="h-3.5 w-3.5"></i> 5 Metode Kriptografi
+        </div>
+        <h1 class="mx-auto max-w-3xl text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
+          Enkripsi &amp; Dekripsi<br />
+          <span class="text-primary text-glow">Teks Aman</span> dalam Satu Tempat
+        </h1>
+        <p class="mx-auto mt-4 max-w-2xl text-sm text-muted-foreground sm:text-base">
+          Aplikasi kriptografi berbasis web, <strong>kriptografi yang disesuaikan khusus untuk materi pembelajaran</strong>. Ubah teks menjadi terenkripsi,
+          lalu kembalikan ke teks aslinya (dekripsi) dengan 5 metode klasik hingga modern.
+        </p>
+        <div class="mx-auto mt-6 grid max-w-xl grid-cols-3 gap-2">
+          <div class="flex flex-col items-center gap-1 rounded-lg border border-border/50 bg-card/50 px-3 py-3 backdrop-blur">
+            <i data-lucide="shield-check" class="h-4 w-4 text-primary"></i>
+            <span class="font-mono text-lg font-bold">5</span>
+            <span class="text-[10px] uppercase tracking-wider text-muted-foreground">Metode</span>
+          </div>
+          <div class="flex flex-col items-center gap-1 rounded-lg border border-border/50 bg-card/50 px-3 py-3 backdrop-blur">
+            <i data-lucide="lock" class="h-4 w-4 text-primary"></i>
+            <span class="font-mono text-lg font-bold">&#10003;</span>
+            <span class="text-[10px] uppercase tracking-wider text-muted-foreground">Enkripsi</span>
+          </div>
+          <div class="flex flex-col items-center gap-1 rounded-lg border border-border/50 bg-card/50 px-3 py-3 backdrop-blur">
+            <i data-lucide="lock-open" class="h-4 w-4 text-primary"></i>
+            <span class="font-mono text-lg font-bold">&#10003;</span>
+            <span class="text-[10px] uppercase tracking-wider text-muted-foreground">Dekripsi</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- TOOL -->
+      <div class="space-y-6">
+        <!-- METHOD SELECTOR -->
+        <section aria-label="Pilih metode kriptografi">
+          <div class="mb-3 flex items-center justify-between">
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Pilih Metode</h2>
+            <span class="inline-flex items-center rounded-md border border-transparent bg-secondary px-2 py-0.5 font-mono text-[11px]" id="method-count">5 metode</span>
+          </div>
+          <div id="method-grid" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"></div>
+        </section>
+
+        <!-- WORK AREA -->
+        <div class="overflow-hidden rounded-xl border border-border/60 bg-card/60 backdrop-blur">
+          <div class="flex flex-col gap-3 border-b border-border/60 bg-gradient-to-r from-primary/5 to-transparent p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-start gap-3">
+              <span id="info-icon" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-xl font-mono font-bold text-primary">A</span>
+              <div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <h3 id="info-name" class="font-mono text-lg font-bold tracking-tight">Caesar Cipher</h3>
+                  <span id="info-cat" class="cat-badge rounded-full border px-1.5 py-0.5 text-[10px] font-medium" data-cat="Klasik">Klasik</span>
+                </div>
+                <p id="info-desc" class="mt-0.5 max-w-2xl text-xs text-muted-foreground sm:text-sm"></p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 rounded-lg border border-border/50 bg-background/40 px-3 py-2 font-mono text-[11px] text-muted-foreground">
+              <i data-lucide="key-round" class="h-3.5 w-3.5 text-primary"></i>
+              <span id="info-keytype">Shift</span>
+            </div>
+          </div>
+
+          <div class="grid gap-4 p-4 lg:grid-cols-2">
+            <!-- INPUT -->
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <label for="crypto-input" class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <span class="flex h-5 w-5 items-center justify-center rounded bg-muted/60 font-mono text-[10px]">IN</span> Teks Input
+                </label>
+                <span id="input-count" class="font-mono text-[11px] text-muted-foreground">0 char</span>
+              </div>
+              <textarea id="crypto-input" placeholder="Ketik atau tempel teks di sini..." spellcheck="false"
+                class="cs-scroll min-h-[180px] resize-y rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm leading-relaxed outline-none focus:ring-2 focus:ring-ring"></textarea>
+            </div>
+            <!-- OUTPUT -->
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <label for="crypto-output" class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <span class="flex h-5 w-5 items-center justify-center rounded bg-primary/15 font-mono text-[10px] text-primary">OUT</span> Hasil
+                </label>
+                <div class="flex items-center gap-2">
+                  <span id="output-count" class="font-mono text-[11px] text-muted-foreground">0 char</span>
+                  <button id="btn-copy" type="button" disabled
+                    class="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40">
+                    <i data-lucide="clipboard-copy" class="h-3.5 w-3.5"></i> <span id="copy-text">Salin</span>
+                  </button>
+                </div>
+              </div>
+              <textarea id="crypto-output" placeholder="Hasil enkripsi / dekripsi akan muncul di sini..." spellcheck="false"
+                class="cs-scroll min-h-[180px] resize-y rounded-md border border-primary/30 bg-primary/[0.03] px-3 py-2 font-mono text-sm leading-relaxed outline-none focus:ring-2 focus:ring-ring"></textarea>
+            </div>
+          </div>
+
+          <!-- CONTROLS -->
+          <div class="border-t border-border/60 bg-background/30 p-4">
+            <div class="grid gap-4 md:grid-cols-2 md:items-end">
+              <div id="control-area" class="space-y-2"></div>
+              <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <button id="btn-encrypt" type="button" class="col-span-2 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:col-span-1">
+                  <i data-lucide="lock" class="h-4 w-4"></i> Enkripsi
+                </button>
+                <button id="btn-decrypt" type="button" class="col-span-2 inline-flex h-10 items-center justify-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-4 text-sm font-medium text-primary transition-colors hover:bg-primary/15 sm:col-span-1">
+                  <i data-lucide="lock-open" class="h-4 w-4"></i> Dekripsi
+                </button>
+                <button id="btn-swap" type="button" title="Pindahkan output ke input" class="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium transition-colors hover:bg-accent">
+                  <i data-lucide="arrow-right-left" class="h-4 w-4"></i> <span class="hidden sm:inline">Tukar</span>
+                </button>
+                <button id="btn-clear" type="button" title="Bersihkan" class="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium transition-colors hover:bg-accent hover:text-destructive">
+                  <i data-lucide="eraser" class="h-4 w-4"></i> <span class="hidden sm:inline">Bersih</span>
+                </button>
+              </div>
+            </div>
+            <div class="mt-3 flex items-center gap-2 rounded-md bg-muted/40 px-3 py-2 font-mono text-[11px] text-muted-foreground">
+              <span class="text-primary">contoh:</span><span id="info-example">Geser 3: A→D, B→E, Z→C</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- HISTORY -->
+        <div class="rounded-xl border border-border/60 bg-card/50 backdrop-blur">
+          <div class="flex items-center justify-between p-4">
+            <button id="history-toggle" type="button" class="flex items-center gap-2 text-sm font-semibold">
+              <i data-lucide="history" class="h-4 w-4 text-primary"></i> Riwayat Operasi
+              <span id="history-count" class="inline-flex items-center rounded-md border border-transparent bg-secondary px-2 py-0.5 font-mono text-[10px]">0</span>
+              <i data-lucide="chevron-down" id="history-chevron" class="h-4 w-4 transition-transform"></i>
+            </button>
+            <button id="btn-clear-history" type="button" class="hidden inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-destructive">
+              <i data-lucide="trash-2" class="h-3.5 w-3.5"></i> Kosongkan
+            </button>
+          </div>
+          <div id="history-body" class="border-t border-border/60">
+            <p id="history-empty" class="p-4 text-center text-sm text-muted-foreground">
+              Belum ada operasi. Lakukan enkripsi atau dekripsi untuk melihat riwayat di sini.
+            </p>
+            <ul id="history-list" class="cs-scroll max-h-96 overflow-y-auto space-y-2 p-2 hidden"></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- METHODS INFO -->
+      <section id="metode" class="mt-14 scroll-mt-20">
+        <div class="mb-6 text-center">
+          <h2 class="text-2xl font-bold tracking-tight sm:text-3xl">Metode Kriptografi</h2>
+          <p class="mt-2 text-sm text-muted-foreground">Lima algoritma dengan kekuatan dan karakteristik berbeda.</p>
+        </div>
+        <div id="methods-info-grid" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3"></div>
+      </section>
+
+      <!-- HOW IT WORKS -->
+      <section id="cara-kerja" class="mt-14 scroll-mt-20">
+        <div class="mb-6 text-center">
+          <h2 class="text-2xl font-bold tracking-tight sm:text-3xl">Cara Kerja</h2>
+          <p class="mt-2 text-sm text-muted-foreground">Tiga langkah sederhana untuk mengenkripsi maupun mendekripsi.</p>
+        </div>
+        <div class="grid gap-4 md:grid-cols-3" id="steps-grid"></div>
+      </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="mt-auto border-t border-border/40 bg-background/70 backdrop-blur-xl">
+      <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-5 text-center sm:flex-row sm:px-6 sm:text-left">
+        <div class="flex items-center gap-2">
+          <i data-lucide="shield-check" class="h-4 w-4 text-primary"></i>
+          <span class="text-sm text-muted-foreground">
+            <span class="font-mono font-semibold text-foreground">Poneglyph</span> sebagai pembelajaran
+          </span>
+        </div>
+        <div class="flex items-center gap-4 text-xs text-muted-foreground">
+          <span class="font-mono">5 metode</span><span aria-hidden="true">•</span>
+          <span class="font-mono">encrypt + decrypt</span><span aria-hidden="true">•</span>
+          <span class="font-mono">HTML murni</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container" class="fixed top-20 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <script>
+  /* ===================================================================
+   * KRIPTOGRAFI — semua jalan di browser (vanilla JS)
+   * 5 metode: Caesar, Vigenère, AES-256-CBC, Base64, XOR
+   * =================================================================== */
+
+  // ---- 1. CAESAR CIPHER ----
+  function caesarShift(text, shift) {
+    const s = ((shift % 26) + 26) % 26;
+    return text.replace(/[a-zA-Z]/g, (c) => {
+      const base = c <= 'Z' ? 65 : 97;
+      return String.fromCharCode(((c.charCodeAt(0) - base + s) % 26) + base);
+    });
+  }
+  function caesarEncrypt(text, shift) { return caesarShift(text, shift); }
+  function caesarDecrypt(text, shift) { return caesarShift(text, -shift); }
+
+  // ---- 2. VIGENÈRE CIPHER ----
+  function vigenereCore(text, key, decrypt) {
+    const cleanKey = (key || '').replace(/[^a-zA-Z]/g, '').toUpperCase();
+    if (!cleanKey) return text;
+    let ki = 0;
+    return text.replace(/[a-zA-Z]/g, (c) => {
+      const base = c <= 'Z' ? 65 : 97;
+      const k = cleanKey.charCodeAt(ki % cleanKey.length) - 65;
+      ki++;
+      const off = decrypt ? (c.charCodeAt(0) - base - k + 26) % 26 : (c.charCodeAt(0) - base + k) % 26;
+      return String.fromCharCode(off + base);
+    });
+  }
+  function vigenereEncrypt(text, key) { return vigenereCore(text, key, false); }
+  function vigenereDecrypt(text, key) { return vigenereCore(text, key, true); }
+
+  // ---- 3. AES-256-CBC ----
+  const AES_SALT = 'crypto-app-static-salt-v1';
+  function aesEncrypt(text, password) {
+    if (!password) throw new Error('AES membutuhkan kata sandi (key).');
+    const key = CryptoJS.PBKDF2(password, AES_SALT, { keySize: 256/32, iterations: 1 });
+    const iv = CryptoJS.lib.WordArray.random(16);
+    const encrypted = CryptoJS.AES.encrypt(text, key, { iv: iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });
+    return iv.toString(CryptoJS.enc.Hex) + ':' + encrypted.ciphertext.toString(CryptoJS.enc.Hex);
+  }
+  function aesDecrypt(data, password) {
+    if (!password) throw new Error('AES membutuhkan kata sandi (key).');
+    const parts = data.split(':');
+    if (parts.length !== 2) throw new Error('Format ciphertext AES tidak valid (diharapkan iv:cipher).');
+    const key = CryptoJS.PBKDF2(password, AES_SALT, { keySize: 256/32, iterations: 1 });
+    const iv = CryptoJS.enc.Hex.parse(parts[0]);
+    const cipherParams = CryptoJS.lib.CipherParams.create({ ciphertext: CryptoJS.enc.Hex.parse(parts[1]) });
+    const decrypted = CryptoJS.AES.decrypt(cipherParams, key, { iv: iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });
+    return decrypted.toString(CryptoJS.enc.Utf8);
+  }
+
+  // ---- 4. BASE64 ----
+  function base64Encrypt(text) {
+    // aman untuk unicode
+    return btoa(unescape(encodeURIComponent(text)));
+  }
+  function base64Decrypt(text) {
+    const cleaned = text.trim().replace(/\s+/g, '');
+    return decodeURIComponent(escape(atob(cleaned)));
+  }
+
+  // ---- 5. XOR CIPHER (output base64) ----
+  function xorEncrypt(text, key) {
+    if (!key) throw new Error('XOR membutuhkan kunci (key).');
+    const tb = new TextEncoder().encode(text);
+    const kb = new TextEncoder().encode(key);
+    const out = new Uint8Array(tb.length);
+    for (let i = 0; i < tb.length; i++) out[i] = tb[i] ^ kb[i % kb.length];
+    let bin = '';
+    out.forEach(b => bin += String.fromCharCode(b));
+    return btoa(bin);
+  }
+  function xorDecrypt(data, key) {
+    if (!key) throw new Error('XOR membutuhkan kunci (key).');
+    const cleaned = data.trim().replace(/\s+/g, '');
+    const bin = atob(cleaned);
+    const tb = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) tb[i] = bin.charCodeAt(i);
+    const kb = new TextEncoder().encode(key);
+    const out = new Uint8Array(tb.length);
+    for (let i = 0; i < tb.length; i++) out[i] = tb[i] ^ kb[i % kb.length];
+    return new TextDecoder().decode(out);
+  }
+
+  // ---- DISPATCHER ----
+  function runCrypto(method, action, text, key, shift) {
+    let result = '';
+    const meta = {};
+    if (method === 'caesar') {
+      result = action === 'encrypt' ? caesarEncrypt(text, shift) : caesarDecrypt(text, shift);
+      meta.shift = shift;
+    } else if (method === 'vigenere') {
+      if (!key) throw new Error('Vigenère membutuhkan kata kunci (key).');
+      result = action === 'encrypt' ? vigenereEncrypt(text, key) : vigenereDecrypt(text, key);
+      meta.keyLength = key.replace(/[^a-zA-Z]/g, '').length;
+    } else if (method === 'aes') {
+      result = action === 'encrypt' ? aesEncrypt(text, key) : aesDecrypt(text, key);
+      meta.algorithm = 'AES-256-CBC';
+    } else if (method === 'base64') {
+      result = action === 'encrypt' ? base64Encrypt(text) : base64Decrypt(text);
+      meta.encoding = 'Base64';
+    } else if (method === 'xor') {
+      if (!key) throw new Error('XOR membutuhkan kunci (key).');
+      result = action === 'encrypt' ? xorEncrypt(text, key) : xorDecrypt(text, key);
+      meta.keyLength = key.length;
+    } else {
+      throw new Error('Metode tidak dikenal: ' + method);
+    }
+    return { result, method, action, meta };
+  }
+
+  /* ===================================================================
+   * DATA METODE
+   * =================================================================== */
+  const METHODS = [
+    { id:'caesar', name:'Caesar', fullName:'Caesar Cipher', category:'Klasik',
+      description:'Sandi substitusi sederhana yang menggeser setiap huruf sejumlah posisi tertentu dalam alfabet.',
+      needsKey:false, needsShift:true, keyLabel:'', keyPlaceholder:'', keyHint:'',
+      icon:'A', example:'Geser 3: A→D, B→E, Z→C' },
+    { id:'vigenere', name:'Vigenère', fullName:'Vigenère Cipher', category:'Klasik',
+      description:'Sandi polialfabetik menggunakan kata kunci untuk menentukan jumlah pergeseran tiap huruf.',
+      needsKey:true, needsShift:false, keyLabel:'Kata Kunci', keyPlaceholder:'contoh: ZAY',
+      keyHint:'Gunakan huruf alfabet. Bukan huruf akan diabaikan.',
+      icon:'V', example:'zay ZAY menggeser tiap huruf berbeda' },
+    { id:'aes', name:'AES', fullName:'AES-256-CBC', category:'Modern',
+      description:'Standar Enkripsi Lanjutan 256-bit dengan mode CBC. Sangat aman dan digunakan secara luas.',
+      needsKey:true, needsShift:false, keyLabel:'Kata Sandi', keyPlaceholder:'contoh: drian123',
+      keyHint:'Kata sandi diturunkan menjadi key 256-bit via PBKDF2.',
+      icon:'#', example:'Output format: iv:ciphertext (hex)' },
+    { id:'base64', name:'Base64', fullName:'Base64 Encoding', category:'Encoding',
+      description:'Pengodean data biner menjadi teks ASCII agar aman dikirim melalui media teks.',
+      needsKey:false, needsShift:false, keyLabel:'', keyPlaceholder:'', keyHint:'Tidak memerlukan kunci.',
+      icon:'B', example:'Hallo → SGFsbG8=' },
+    { id:'xor', name:'XOR', fullName:'XOR Cipher', category:'Klasik',
+      description:'Operasi XOR bitwise antara teks dan kunci berulang. Output dikodekan Base64.',
+      needsKey:true, needsShift:false, keyLabel:'Kunci', keyPlaceholder:'contoh: huda / medi',
+      keyHint:'Kunci yang sama dipakai untuk enkripsi & dekripsi.',
+      icon:'X', example:'Dekripsi = Enkripsi dengan kunci yang sama' },
+  ];
+  const METHOD_MAP = Object.fromEntries(METHODS.map(m => [m.id, m]));
+
+  const METHODS_INFO = [
+    { name:'Caesar Cipher', icon:'A', category:'Klasik',
+      desc:'Sandi substitusi paling kuno. Setiap huruf digeser sejumlah posisi tertentu. Caesar kuno menggunakan geseran 3.',
+      tags:['substitusi','geseran','symmetric'] },
+    { name:'Vigenère Cipher', icon:'V', category:'Klasik',
+      desc:'Sandi polialfabetik dengan kata kunci. Tiap huruf digeser berbeda sesuai huruf kunci, jauh lebih kuat dari Caesar.',
+      tags:['polialfabetik','kata kunci','symmetric'] },
+    { name:'AES-256-CBC', icon:'#', category:'Modern',
+      desc:'Advanced Encryption Standard 256-bit dengan mode CBC dan IV acak. Standar enkripsi modern yang sangat aman.',
+      tags:['AES','256-bit','CBC','PBKDF2'] },
+    { name:'Base64', icon:'B', category:'Encoding',
+      desc:'Pengodean data biner menjadi teks ASCII. Bukan enkripsi keamanan, tapi sering dipakai untuk representasi data.',
+      tags:['encoding','ASCII','binary'] },
+    { name:'XOR Cipher', icon:'X', category:'Klasik',
+      desc:'Operasi XOR bitwise antara teks dan kunci berulang. Enkripsi dan dekripsi menggunakan operasi yang sama.',
+      tags:['bitwise','XOR','symmetric'] },
+    { name:'Catatan Keamanan', icon:'i', category:'Info',
+      desc:'Caesar, Vigenère, Base64 & XOR mudah dipecahkan. Untuk data sensitif, gunakan AES.',
+      tags:['edukasi','keamanan'] },
+  ];
+
+  const STEPS = [
+    { n:'01', title:'Pilih Metode', desc:'Pilih satu dari 5 metode kriptografi sesuai kebutuhan Anda.', icon:'shield-check' },
+    { n:'02', title:'Masukkan Teks & Kunci', desc:'Ketik teks yang ingin diproses, isi kunci atau geseran bila diperlukan.', icon:'lock' },
+    { n:'03', title:'Enkripsi / Dekripsi', desc:'Klik tombol untuk mengubah teks atau mengembalikannya ke teks asli.', icon:'lock-open' },
+  ];
+
+  /* ===================================================================
+   * STATE & DOM
+   * =================================================================== */
+  const state = { method:'caesar', key:'', shift:3, history:[], historyOpen:true };
+
+  const el = {
+    input: document.getElementById('crypto-input'),
+    output: document.getElementById('crypto-output'),
+    inputCount: document.getElementById('input-count'),
+    outputCount: document.getElementById('output-count'),
+    infoIcon: document.getElementById('info-icon'),
+    infoName: document.getElementById('info-name'),
+    infoCat: document.getElementById('info-cat'),
+    infoDesc: document.getElementById('info-desc'),
+    infoKeytype: document.getElementById('info-keytype'),
+    infoExample: document.getElementById('info-example'),
+    controlArea: document.getElementById('control-area'),
+    methodGrid: document.getElementById('method-grid'),
+    btnEncrypt: document.getElementById('btn-encrypt'),
+    btnDecrypt: document.getElementById('btn-decrypt'),
+    btnSwap: document.getElementById('btn-swap'),
+    btnClear: document.getElementById('btn-clear'),
+    btnCopy: document.getElementById('btn-copy'),
+    copyText: document.getElementById('copy-text'),
+    themeToggle: document.getElementById('theme-toggle'),
+    historyToggle: document.getElementById('history-toggle'),
+    historyChevron: document.getElementById('history-chevron'),
+    historyBody: document.getElementById('history-body'),
+    historyEmpty: document.getElementById('history-empty'),
+    historyList: document.getElementById('history-list'),
+    historyCount: document.getElementById('history-count'),
+    btnClearHistory: document.getElementById('btn-clear-history'),
+    toastContainer: document.getElementById('toast-container'),
+    methodsInfoGrid: document.getElementById('methods-info-grid'),
+    stepsGrid: document.getElementById('steps-grid'),
+  };
+
+  /* ===== Toast ===== */
+  function toast(title, description, variant) {
+    const t = document.createElement('div');
+    t.className = 'toast pointer-events-auto flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-1 rounded-lg border border-border/60 bg-card p-3 shadow-lg '
+      + (variant === 'destructive' ? 'toast-error' : '');
+    const ttl = document.createElement('p');
+    ttl.className = 'text-sm font-semibold ' + (variant === 'destructive' ? 'text-destructive' : 'text-foreground');
+    ttl.textContent = title;
+    t.appendChild(ttl);
+    if (description) {
+      const d = document.createElement('p');
+      d.className = 'text-xs text-muted-foreground';
+      d.textContent = description;
+      t.appendChild(d);
+    }
+    el.toastContainer.appendChild(t);
+    setTimeout(() => {
+      t.style.transition = 'opacity 0.3s, transform 0.3s';
+      t.style.opacity = '0'; t.style.transform = 'translateY(8px)';
+      setTimeout(() => t.remove(), 300);
+    }, 3200);
+  }
+
+  /* ===== Theme ===== */
+  function initTheme() {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'light') document.documentElement.classList.remove('dark');
+    else document.documentElement.classList.add('dark');
+  }
+  el.themeToggle.addEventListener('click', () => {
+    const isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  });
+
+  /* ===== Helpers ===== */
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  /* ===== Render methods ===== */
+  function renderMethods() {
+    el.methodGrid.innerHTML = '';
+    METHODS.forEach(m => {
+      const active = m.id === state.method;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.dataset.method = m.id;
+      btn.className = 'method-card group relative flex flex-col items-start gap-2 rounded-xl border p-3 text-left transition-all duration-200 '
+        + (active ? 'active border-primary/60 bg-primary/5 crypto-glow' : 'border-border/60 bg-card/50 hover:border-primary/40 hover:bg-accent/40');
+      btn.innerHTML = `
+        <div class="flex w-full items-center justify-between">
+          <span class="method-icon flex h-9 w-9 items-center justify-center rounded-lg text-lg font-mono font-bold">${m.icon}</span>
+          <span class="h-2 w-2 rounded-full ${active ? 'cat-dot-' + m.id : 'bg-transparent'}"></span>
+        </div>
+        <div class="w-full">
+          <span class="font-mono text-sm font-semibold">${m.name}</span>
+          <span class="cat-badge mt-1 inline-block rounded-full border px-1.5 py-0.5 text-[10px] font-medium" data-cat="${m.category}">${m.category}</span>
+        </div>`;
+      btn.addEventListener('click', () => selectMethod(m.id));
+      el.methodGrid.appendChild(btn);
+    });
+  }
+
+  function selectMethod(id) {
+    state.method = id;
+    const m = METHOD_MAP[id];
+    if (!m) return;
+    el.infoIcon.textContent = m.icon;
+    el.infoName.textContent = m.fullName;
+    el.infoCat.textContent = m.category;
+    el.infoCat.dataset.cat = m.category;
+    el.infoDesc.textContent = m.description;
+    el.infoExample.textContent = m.example;
+    el.infoKeytype.textContent = m.needsKey ? m.keyLabel : m.needsShift ? 'Shift' : 'Tanpa kunci';
+    renderControlArea(m);
+    renderMethods();
+  }
+
+  function renderControlArea(m) {
+    if (m.needsKey) {
+      el.controlArea.innerHTML = `
+        <label for="crypto-key" class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <span class="inline-flex h-3.5 w-3.5 text-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"/><circle cx="8.5" cy="8.5" r="6.5"/></svg>
+          </span>${m.keyLabel}
+        </label>
+        <input id="crypto-key" type="text" value="${escapeHtml(state.key)}" placeholder="${m.keyPlaceholder}"
+          class="font-mono text-sm flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 outline-none focus:ring-2 focus:ring-ring" autocomplete="off" spellcheck="false" />
+        <p class="text-[11px] text-muted-foreground">${m.keyHint}</p>`;
+      document.getElementById('crypto-key').addEventListener('input', e => state.key = e.target.value);
+    } else if (m.needsShift) {
+      el.controlArea.innerHTML = `
+        <div class="flex items-center justify-between">
+          <label for="crypto-shift" class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span class="inline-flex h-3.5 w-3.5 text-primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+            </span>Jumlah Geser (Shift)
+          </label>
+          <span class="inline-flex items-center rounded-md border border-border px-2 py-0.5 font-mono text-xs tabular-nums" id="shift-value">${state.shift}</span>
+        </div>
+        <input id="crypto-shift" type="range" min="1" max="25" step="1" value="${state.shift}" class="my-2" />
+        <div class="flex justify-between font-mono text-[10px] text-muted-foreground">
+          <span>1</span><span>13 (ROT13)</span><span>25</span>
+        </div>`;
+      const shiftInput = document.getElementById('crypto-shift');
+      const shiftValue = document.getElementById('shift-value');
+      shiftInput.addEventListener('input', e => {
+        state.shift = parseInt(e.target.value, 10);
+        shiftValue.textContent = state.shift;
+      });
+    } else {
+      el.controlArea.innerHTML = `
+        <div class="flex items-center gap-2 rounded-lg border border-dashed border-border/60 bg-muted/30 px-3 py-3 text-xs text-muted-foreground">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-primary"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
+          Metode ini tidak memerlukan kunci atau pengaturan tambahan.
+        </div>`;
+    }
+  }
+
+  /* ===== Counts ===== */
+  el.input.addEventListener('input', () => el.inputCount.textContent = el.input.value.length + ' char');
+  el.output.addEventListener('input', () => {
+    el.outputCount.textContent = el.output.value.length + ' char';
+    el.btnCopy.disabled = !el.output.value;
+  });
+
+  /* ===== Run action ===== */
+  function runAction(action) {
+    const text = el.input.value;
+    if (!text.trim()) {
+      toast('Input kosong', 'Masukkan teks yang ingin diproses terlebih dahulu.', 'destructive');
+      return;
+    }
+    const m = METHOD_MAP[state.method];
+    if (m.needsKey && !state.key.trim()) {
+      toast('Kunci diperlukan', m.keyHint, 'destructive');
+      return;
+    }
+    const btn = action === 'encrypt' ? el.btnEncrypt : el.btnDecrypt;
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56" stroke-linecap="round"/></svg> ${action === 'encrypt' ? 'Enkripsi' : 'Dekripsi'}`;
+    try {
+      const out = runCrypto(state.method, action, text, state.key, state.shift);
+      el.output.value = out.result;
+      el.outputCount.textContent = out.result.length + ' char';
+      el.btnCopy.disabled = false;
+      addHistory({ method: state.method, action, input: text, output: out.result, key: state.key, shift: state.shift });
+      toast(action === 'encrypt' ? 'Enkripsi berhasil' : 'Dekripsi berhasil',
+            `${m.fullName} • ${text.length} karakter → ${out.result.length} karakter`);
+    } catch (e) {
+      toast('Operasi gagal', e.message, 'destructive');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = original;
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+
+  el.btnEncrypt.addEventListener('click', () => runAction('encrypt'));
+  el.btnDecrypt.addEventListener('click', () => runAction('decrypt'));
+
+  el.btnSwap.addEventListener('click', () => {
+    if (!el.output.value) { toast('Tidak ada output', 'Belum ada hasil untuk dipindahkan ke input.', 'destructive'); return; }
+    el.input.value = el.output.value;
+    el.output.value = '';
+    el.inputCount.textContent = el.input.value.length + ' char';
+    el.outputCount.textContent = '0 char';
+    el.btnCopy.disabled = true;
+    toast('Dipindahkan', 'Output → Input.');
+  });
+
+  el.btnClear.addEventListener('click', () => {
+    el.input.value = ''; el.output.value = '';
+    el.inputCount.textContent = '0 char'; el.outputCount.textContent = '0 char';
+    el.btnCopy.disabled = true;
+    toast('Dibersihkan');
+  });
+
+  el.btnCopy.addEventListener('click', async () => {
+    if (!el.output.value) return;
+    try {
+      await navigator.clipboard.writeText(el.output.value);
+      el.copyText.textContent = 'Disalin';
+      toast('Tersalin', 'Hasil disalin ke clipboard.');
+      setTimeout(() => el.copyText.textContent = 'Salin', 1600);
+    } catch {
+      toast('Gagal menyalin', 'Browser memblokir akses clipboard.', 'destructive');
+    }
+  });
+
+  /* ===== History ===== */
+  function addHistory(item) {
+    item.id = Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+    item.timestamp = Date.now();
+    state.history.unshift(item);
+    state.history = state.history.slice(0, 15);
+    renderHistory();
+  }
+  function renderHistory() {
+    el.historyCount.textContent = state.history.length;
+    if (state.history.length === 0) {
+      el.historyEmpty.classList.remove('hidden');
+      el.historyList.classList.add('hidden');
+      el.btnClearHistory.classList.add('hidden');
+      return;
+    }
+    el.historyEmpty.classList.add('hidden');
+    el.historyList.classList.remove('hidden');
+    el.btnClearHistory.classList.remove('hidden');
+    el.historyList.innerHTML = '';
+    state.history.forEach(item => {
+      const m = METHOD_MAP[item.method];
+      const time = new Date(item.timestamp).toLocaleTimeString('id-ID');
+      const li = document.createElement('li');
+      li.className = 'animate-float-up rounded-lg border border-border/50 bg-background/40 p-3 transition-colors hover:border-primary/40';
+      li.innerHTML = `
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="flex h-6 w-6 items-center justify-center rounded font-mono text-sm font-bold">${m.icon}</span>
+          <span class="font-mono text-xs font-semibold">${m.fullName}</span>
+          <span class="cat-badge rounded-full border px-1.5 py-0.5 text-[9px] font-medium" data-cat="${m.category}">${m.category}</span>
+          <span class="rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${item.action === 'encrypt' ? 'border-primary/30 bg-primary/10 text-primary' : 'border-amber-500/30 bg-amber-500/10 text-amber-600'}">${item.action === 'encrypt' ? 'Enkripsi' : 'Dekripsi'}</span>
+          <span class="ml-auto font-mono text-[10px] text-muted-foreground">${time}</span>
+        </div>
+        <div class="mt-2 grid gap-2 sm:grid-cols-2">
+          <div class="min-w-0">
+            <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Input</p>
+            <p class="cs-scroll max-h-16 overflow-y-auto break-all font-mono text-[11px] leading-relaxed">${escapeHtml(item.input.slice(0, 200))}${item.input.length > 200 ? '…' : ''}</p>
+          </div>
+          <div class="min-w-0">
+            <p class="text-[10px] uppercase tracking-wider text-primary">Output</p>
+            <p class="cs-scroll max-h-16 overflow-y-auto break-all font-mono text-[11px] leading-relaxed">${escapeHtml(item.output.slice(0, 200))}${item.output.length > 200 ? '…' : ''}</p>
+          </div>
+        </div>
+        <div class="mt-2 flex items-center justify-end gap-2">
+          <button type="button" class="load-btn inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[11px] text-primary hover:bg-primary/10">Muat ke Input</button>
+        </div>`;
+      li.querySelector('.load-btn').addEventListener('click', () => {
+        selectMethod(item.method);
+        el.input.value = item.output;
+        el.inputCount.textContent = item.output.length + ' char';
+        el.output.value = '';
+        el.outputCount.textContent = '0 char';
+        el.btnCopy.disabled = true;
+        if (item.key !== undefined) state.key = item.key || '';
+        if (item.shift !== undefined) state.shift = item.shift;
+        selectMethod(item.method);
+        toast('Dimuat dari riwayat', 'Output ditempatkan ke input.');
+      });
+      el.historyList.appendChild(li);
+    });
+  }
+  el.historyToggle.addEventListener('click', () => {
+    state.historyOpen = !state.historyOpen;
+    el.historyBody.style.display = state.historyOpen ? '' : 'none';
+    el.historyChevron.style.transform = state.historyOpen ? '' : 'rotate(-90deg)';
+  });
+  el.btnClearHistory.addEventListener('click', () => {
+    state.history = []; renderHistory(); toast('Riwayat dikosongkan');
+  });
+
+  /* ===== Methods info & steps ===== */
+  function renderMethodsInfo() {
+    el.methodsInfoGrid.innerHTML = '';
+    METHODS_INFO.forEach(m => {
+      const div = document.createElement('div');
+      div.className = 'group relative overflow-hidden rounded-xl border border-border/60 bg-card/50 p-5 backdrop-blur transition-colors hover:border-primary/40';
+      div.innerHTML = `
+        <div class="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-primary/5 blur-2xl transition-opacity group-hover:bg-primary/10"></div>
+        <div class="flex items-center gap-3">
+          <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15 text-lg font-mono font-bold text-primary">${m.icon}</span>
+          <div>
+            <h3 class="font-mono text-base font-bold">${m.name}</h3>
+            <p class="text-[11px] uppercase tracking-wider text-muted-foreground">${m.category}</p>
+          </div>
+        </div>
+        <p class="mt-3 text-sm leading-relaxed text-muted-foreground">${m.desc}</p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          ${m.tags.map(t => `<span class="rounded-md bg-muted/60 px-2 py-0.5 font-mono text-[10px] text-muted-foreground">${t}</span>`).join('')}
+        </div>`;
+      el.methodsInfoGrid.appendChild(div);
+    });
+  }
+  function renderSteps() {
+    el.stepsGrid.innerHTML = '';
+    STEPS.forEach(s => {
+      const div = document.createElement('div');
+      div.className = 'relative rounded-xl border border-border/60 bg-card/50 p-5 backdrop-blur';
+      div.innerHTML = `
+        <span class="absolute right-4 top-4 font-mono text-3xl font-bold text-primary/15">${s.n}</span>
+        <i data-lucide="${s.icon}" class="h-7 w-7 text-primary"></i>
+        <h3 class="mt-3 font-semibold">${s.title}</h3>
+        <p class="mt-1 text-sm text-muted-foreground">${s.desc}</p>`;
+      el.stepsGrid.appendChild(div);
+    });
+  }
+
+  /* ===== Init ===== */
+  initTheme();
+  renderMethods();
+  selectMethod('caesar');
+  renderMethodsInfo();
+  renderSteps();
+  el.btnCopy.disabled = true;
+  if (window.lucide) lucide.createIcons();
+  </script>
+</body>
+</html>
